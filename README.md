@@ -25,7 +25,7 @@ The host must route every tool invocation through the gateway and provide an aut
 - Default deny; explicit deny overrides allow and review rules.
 - Exact tool names, agent matching, required typed arguments, value allowlists and length constraints.
 - Fixed-window quotas shared per rule; overlapping rules must all permit arguments.
-- Approval-required requests are held (never executed). No approval workflow or override is implemented.
+- Approval-required requests are held until reviewed. The original AgentGuard library has no approval override; the expanded Gateway includes a reviewer workflow.
 - Separate execution outcome events and hash-linked audit records; no raw argument values or handler outputs in audit.
 - Local browser console with editable JSON policy, eight scenarios, counters and JSON audit export.
 
@@ -57,7 +57,7 @@ A real integration must enforce claim-level authorisation inside the tool handle
 
 ## Security boundaries and limitations
 
-This is a portfolio prototype, not a production security product. The browser sandbox binds to IPv4 loopback only, accepts synthetic identities from its request editor and exposes policy editing to local clients. Do not expose it to a network or deploy it as-is. The runtime policy and the last 1,000 audit events are held in memory. Hash chaining can detect changes relative to a trusted anchor, but cannot stop an attacker from rewriting the whole chain. Quotas are process-local and fixed-window; restart resets them. Handler timeouts, distributed quotas, durable signed audit storage, authentication, real approval workflows and MCP/provider adapters are future work. No real claims, emails, credentials or shell operations are used.
+This is a portfolio prototype, not a production security product. The browser sandbox binds to IPv4 loopback only, accepts synthetic identities from its request editor and exposes policy editing to local clients. Do not expose it to a network or deploy it as-is. The runtime policy and the last 1,000 audit events are held in memory. Hash chaining can detect changes relative to a trusted anchor, but cannot stop an attacker from rewriting the whole chain. Quotas are process-local and fixed-window; restart resets them. The original AgentGuard library lacks the advanced controls described below. Distributed quotas and MCP/provider adapters remain future work. No real claims, emails, credentials or shell operations are used.
 
 ## Tests
 
@@ -75,7 +75,7 @@ This is a portfolio prototype, not a production security product. The browser sa
 
 ## Authenticated gateway (v0.2)
 
-The original browser sandbox is unchanged and remains a synthetic local demo. The new authenticated API is a separate service: `npm run secure`. Set `AGENTGUARD_STORAGE_KEY` to a random secret of at least 32 bytes and `AGENTGUARD_CREDENTIALS` to a JSON array of objects with `token` (unique random 32+ character bearer secret), `role` (admin, reviewer, viewer, agent) and `identity` (trusted agent/operator ID). Generate secrets with `node -e "console.log(require('node:crypto').randomBytes(32).toString('hex'))"`. Do not commit them. Default binding is 127.0.0.1:8788. All endpoints require authentication; use an authenticated TLS reverse proxy if remote access is needed, and do not expose the original sandbox.
+The browser sandbox now uses the expanded gateway and remains a synthetic local demo. It includes policy preview, human-review simulation, kill switch, agent disabling, revision rollback, audit filters and alerts. Its operator and reviewer controls intentionally share the local unauthenticated interface; use the separate authenticated API for role separation. The new authenticated API is a separate service: `npm run secure`. Set `AGENTGUARD_STORAGE_KEY` to a random secret of at least 32 bytes and `AGENTGUARD_CREDENTIALS` to a JSON array of objects with `token` (unique random 32+ character bearer secret), `role` (admin, reviewer, viewer, agent) and `identity` (trusted agent/operator ID). Generate secrets with `node -e "console.log(require('node:crypto').randomBytes(32).toString('hex'))"`. Do not commit them. Default binding is 127.0.0.1:8788. All endpoints require authentication; use an authenticated TLS reverse proxy if remote access is needed, and do not expose the original sandbox.
 
 | Endpoint | Role |
 |---|---|

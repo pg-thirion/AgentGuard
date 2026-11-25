@@ -1,0 +1,25 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {spawn} from 'node:child_process';
+import {once} from 'node:events';
+import {createServer} from 'node:net';
+test('local dashboard API, preview, review, controls and rollback',async t=>{
+  const probe=createServer();probe.listen(0,'127.0.0.1');await once(probe,'listening');const port=probe.address().port;await new Promise(r=>probe.close(r));
+  const child=spawn(process.execPath,['src/server.js'],{env:{...process.env,PORT:String(port)},stdio:['ignore','pipe','pipe']});
+  t.after(()=>{child.kill();});
+  await new Promise((resolve,reject)=>{const timer=setTimeout(()=>reject(Error('Server startup timeout')),5000);child.once('error',e=>{clearTimeout(timer);reject(e);});child.once('exit',code=>{clearTimeout(timer);reject(Error('Server exited '+code));});child.stdout.once('data',()=>{clearTimeout(timer);resolve();});});
+  const base='http://127.0.0.1:'+port;
+  const api=async(path,body)=>{const r=await fetch(base+path,body===undefined?{}:{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});assert.equal(r.status,200);return r.json();};
+  const page=await fetch(base+'/');assert.equal(page.status,200);assert.match(await page.text(),/Human review queue/);
+  assert.equal((await fetch(base+'/app.js')).status,200);
+  const state=await api('/api/state');assert.equal(state.status.revision,1);
+  const mail={agent:'claims-agent',tool:'send_email',args:{recipient:'review@example.test',subject:'Synthetic'}};
+  assert.equal((await api('/api/preview',mail)).decision,'approval');assert.equal((await api('/api/state')).audit.events.length,0);
+  const held=await api('/api/invoke',mail);assert.equal((await api('/api/state')).approvals.length,1);
+  assert.equal((await api('/api/review',{approvalId:held.approvalId,approve:true})).decision,'allow');
+  await api('/api/halt',{halted:true});assert.equal((await api('/api/preview',mail)).decision,'deny');
+  await api('/api/halt',{halted:false});await api('/api/disable',{agent:'claims-agent',disabled:true});assert.equal((await api('/api/preview',mail)).decision,'deny');
+  await api('/api/disable',{agent:'claims-agent',disabled:false});
+  await api('/api/policy',{policy:state.policy,expectedRevision:1});await api('/api/rollback',{revision:1,expectedRevision:2});
+  assert.equal((await api('/api/state')).status.revision,3);
+});
