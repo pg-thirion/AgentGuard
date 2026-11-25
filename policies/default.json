@@ -1,0 +1,67 @@
+{
+  "version": "1",
+  "rules": [
+    {
+      "id": "block-shell",
+      "agent": "*",
+      "tool": "run_shell",
+      "effect": "deny"
+    },
+    {
+      "id": "block-delete",
+      "agent": "*",
+      "tool": "delete_record",
+      "effect": "deny"
+    },
+    {
+      "id": "claims-read",
+      "agent": "claims-agent",
+      "tool": "read_claim",
+      "effect": "allow",
+      "arguments": {
+        "claimId": {
+          "type": "string",
+          "maxLength": 32
+        }
+      },
+      "limit": {
+        "count": 5,
+        "windowSeconds": 60
+      }
+    },
+    {
+      "id": "claims-mail",
+      "agent": "claims-agent",
+      "tool": "send_email",
+      "effect": "approval",
+      "arguments": {
+        "recipient": {
+          "type": "string",
+          "values": [
+            "review@example.test"
+          ]
+        },
+        "subject": {
+          "type": "string",
+          "maxLength": 120
+        }
+      }
+    },
+    {
+      "id": "support-lookup",
+      "agent": "support-agent",
+      "tool": "lookup_policy",
+      "effect": "allow",
+      "arguments": {
+        "policyId": {
+          "type": "string",
+          "maxLength": 32
+        }
+      },
+      "limit": {
+        "count": 10,
+        "windowSeconds": 60
+      }
+    }
+  ]
+}
