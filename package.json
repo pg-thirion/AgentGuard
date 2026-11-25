@@ -1,6 +1,6 @@
 {
   "name": "agentguard",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "description": "Policy enforcement gateway for AI agent tool calls",
@@ -10,6 +10,7 @@
   "scripts": {
     "start": "node src/server.js",
     "test": "node --test",
-    "demo": "node src/demo.js"
+    "demo": "node src/demo.js",
+    "secure": "node src/secure-server.js"
   }
 }

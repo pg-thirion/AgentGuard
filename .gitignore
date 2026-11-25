@@ -2,3 +2,5 @@ node_modules/
 .env
 *.jsonl
 coverage/
+
+agentguard-state.json*

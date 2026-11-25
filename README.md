@@ -71,3 +71,25 @@ This is a portfolio prototype, not a production security product. The browser sa
 - `policies/default.json`: example policy
 - `web/`: responsive security console
 - `test/`: regression tests
+
+
+## Authenticated gateway (v0.2)
+
+The original browser sandbox is unchanged and remains a synthetic local demo. The new authenticated API is a separate service: `npm run secure`. Set `AGENTGUARD_STORAGE_KEY` to a random secret of at least 32 bytes and `AGENTGUARD_CREDENTIALS` to a JSON array of objects with `token` (unique random 32+ character bearer secret), `role` (admin, reviewer, viewer, agent) and `identity` (trusted agent/operator ID). Generate secrets with `node -e "console.log(require('node:crypto').randomBytes(32).toString('hex'))"`. Do not commit them. Default binding is 127.0.0.1:8788. All endpoints require authentication; use an authenticated TLS reverse proxy if remote access is needed, and do not expose the original sandbox.
+
+| Endpoint | Role |
+|---|---|
+| POST /v1/invoke, /v1/preview | agent; identity from token; body tool, args |
+| GET /v1/status, /v1/policy, /v1/history, /v1/alerts | admin, reviewer, viewer |
+| GET /v1/audit?decision=deny&limit=50&offset=0 | admin, reviewer, viewer |
+| GET /v1/audit/export, /metrics | admin, reviewer, viewer |
+| GET /v1/approvals, POST /v1/review | reviewer only; review body approvalId, approve |
+| POST /v1/policy | admin; policy, expectedRevision |
+| POST /v1/rollback | admin; revision, expectedRevision |
+| POST /v1/halt | admin; halted boolean |
+| POST /v1/disable | admin; agent, disabled boolean |
+| GET /health | any authenticated role |
+
+The API holds review requests in memory for 120 seconds. Reviewers see the exact arguments; agents cannot approve their own request. A review is consumed once, and current policy, quotas and controls are checked before execution. Any policy revision invalidates prior approval. Pending requests are intentionally lost on restart rather than storing arguments. The signed atomic state file retains policy history (20 revisions), quotas, control flags, totals and the last 1,000 audit events. Keep its signing key outside the state directory. A signed older snapshot can still be replayed by an attacker with filesystem access. Single writer only; do not share the file between processes. Storage failure is fail-closed. Credential scanning is heuristic, not complete DLP. Timeouts signal cooperative cancellation; non-cooperative handlers may still have side effects and retain a concurrency slot until settled. Kill switch blocks new execution, not in-flight work. All handlers are synthetic. No external security assessment or production deployment is implied.
+
+See `test/gateway.test.js` and `test/api.test.js` for behavioural and HTTP integration tests.

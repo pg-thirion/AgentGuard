@@ -1,0 +1,13 @@
+import {readFile} from 'node:fs/promises';
+import {Gateway} from './gateway.js';
+import {SignedStore} from './store.js';
+import {createApi} from './api.js';
+import {tools} from './sandbox.js';
+const policy=JSON.parse(await readFile(new URL('../policies/default.json',import.meta.url),'utf8'));
+const credentials=JSON.parse(process.env.AGENTGUARD_CREDENTIALS||'[]');
+const store=new SignedStore(process.env.AGENTGUARD_STATE||'agentguard-state.json',process.env.AGENTGUARD_STORAGE_KEY);
+const gateway=new Gateway({policy,tools,store});
+const port=Number(process.env.AGENTGUARD_PORT||8788);
+const server=createApi({gateway,credentials});
+server.listen(port,'127.0.0.1',()=>console.log('Authenticated API on 127.0.0.1:'+port));
+for(const signal of ['SIGINT','SIGTERM'])process.once(signal,()=>server.close(()=>process.exit(0)));
